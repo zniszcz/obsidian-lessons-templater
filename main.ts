@@ -16,8 +16,33 @@ const DEFAULT_SETTINGS: MocPrevNextSettings = {
 	tocHeader: "Table of Contents",
 };
 
+const LOG_FILE = "moc-prev-next-debug.log";
+const LOG_TO_FILE = process.env.DEBUG_LOG_TO_FILE === "true";
+
 export default class MocPrevNextPlugin extends Plugin {
 	settings!: MocPrevNextSettings;
+	private logLines: string[] = [];
+
+	private log(...parts: unknown[]) {
+		const msg = parts.map(p => typeof p === "string" ? p : JSON.stringify(p)).join(" ");
+		console.log(msg);
+		if (LOG_TO_FILE) {
+			this.logLines.push(`${new Date().toISOString()} ${msg}`);
+		}
+	}
+
+	private async flushLog() {
+		if (!LOG_TO_FILE || this.logLines.length === 0) return;
+		const content = this.logLines.join("\n") + "\n";
+		this.logLines = [];
+		const existing = this.app.vault.getAbstractFileByPath(LOG_FILE);
+		if (existing instanceof TFile) {
+			const prev = await this.app.vault.read(existing);
+			await this.app.vault.modify(existing, prev + content);
+		} else {
+			await this.app.vault.create(LOG_FILE, content);
+		}
+	}
 
 	async onload() {
 		await this.loadSettings();
@@ -78,17 +103,27 @@ export default class MocPrevNextPlugin extends Plugin {
 			return;
 		}
 
+		this.log("[MoC] Active file:", activeFile.path);
+		this.log("[MoC] Settings:", JSON.stringify(this.settings));
+
 		const frontmatter =
 			this.app.metadataCache.getFileCache(activeFile)?.frontmatter;
+		this.log("[MoC] Frontmatter:", JSON.stringify(frontmatter));
 		const mocFieldName = this.settings.mocField;
 		if (!frontmatter?.[mocFieldName]) {
+			this.log(`[MoC] Field "${mocFieldName}" not found in frontmatter`);
 			new Notice(`No "${mocFieldName}" field in frontmatter.`);
+			await this.flushLog();
 			return;
 		}
 
-		const mocName = this.extractLinkName(frontmatter[mocFieldName]);
+		const mocFieldValue = frontmatter[mocFieldName];
+		this.log(`[MoC] Field "${mocFieldName}" value:`, mocFieldValue);
+		const mocName = this.extractLinkName(mocFieldValue);
+		this.log("[MoC] Extracted link name:", mocName);
 		if (!mocName) {
 			new Notice(`Could not parse ${mocFieldName} link.`);
+			await this.flushLog();
 			return;
 		}
 
@@ -96,24 +131,31 @@ export default class MocPrevNextPlugin extends Plugin {
 			mocName,
 			activeFile.path,
 		);
+		this.log("[MoC] Resolved MoC file:", mocFile?.path ?? "null");
 		if (!mocFile) {
 			new Notice(`MoC "${mocName}" not found.`);
+			await this.flushLog();
 			return;
 		}
 
 		const mocContent = await this.app.vault.read(mocFile);
+		this.log("[MoC] MoC content length:", mocContent.length);
 		const links = this.extractLinksFromToc(mocContent);
+		this.log("[MoC] Links found in ToC:", links);
 
 		if (links.length === 0) {
 			new Notice("No links found in MoC table of contents.");
+			await this.flushLog();
 			return;
 		}
 
 		const currentName = activeFile.basename;
 		const currentIndex = links.findIndex((link) => link === currentName);
+		this.log(`[MoC] Looking for "${currentName}" in links, index: ${currentIndex}`);
 
 		if (currentIndex === -1) {
 			new Notice(`"${currentName}" not found in MoC.`);
+			await this.flushLog();
 			return;
 		}
 
@@ -124,8 +166,10 @@ export default class MocPrevNextPlugin extends Plugin {
 				? `[[${links[currentIndex + 1]}]]`
 				: "";
 
+		this.log(`[MoC] Result: prev=${prev || "(none)"}, next=${next || "(none)"}`);
 		await this.updateFrontmatter(activeFile, prev, next);
 		new Notice(`Updated: prev=${prev || "(none)"}, next=${next || "(none)"}`);
+		await this.flushLog();
 	}
 
 	extractLinkName(value: string): string | null {
@@ -140,10 +184,12 @@ export default class MocPrevNextPlugin extends Plugin {
 		const links: string[] = [];
 		const escapedHeader = this.settings.tocHeader.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 		const tocPattern = new RegExp(`^\\s*\\*\\s*#\\s*${escapedHeader}`, "i");
+		this.log("[MoC] ToC pattern:", tocPattern.source);
 
 		for (const line of lines) {
 			if (!inToc) {
 				if (tocPattern.test(line)) {
+					this.log("[MoC] ToC header matched on line:", line);
 					inToc = true;
 				}
 				continue;
@@ -244,7 +290,7 @@ class MocPrevNextSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("ToC header")
-			.setDesc("Heading text in the MoC note that marks the start of the table of contents")
+			.setDesc("Text of the heading that starts the table of contents (e.g. \"Spis treści\", without the \"* #\" prefix)")
 			.addText((text) =>
 				text
 					.setPlaceholder("Table of Contents")
