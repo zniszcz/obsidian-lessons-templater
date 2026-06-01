@@ -20,4 +20,4 @@ Produces `main.js` via esbuild. Deploy by copying `main.js` + `manifest.json` to
 
 - Keep it minimal — one file, no unnecessary abstractions
 - Obsidian API types imported from `obsidian` package (external in bundle)
-- Frontmatter fields are in Polish: `poprzednia`, `następna`, `kurs`
+- Frontmatter field names are configurable in plugin settings (defaults: `course`, `previous`, `next`)

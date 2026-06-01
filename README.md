@@ -6,24 +6,30 @@ A small Obsidian plugin that inserts a lesson template and automatically fills i
 
 1. You create a note whose name matches an entry in your MoC
 2. Run the command from the command palette
-3. The plugin inserts your chosen template and sets `poprzednia` / `następna` frontmatter fields to the adjacent entries in the MoC
+3. The plugin inserts your chosen template and sets the previous/next frontmatter fields to the adjacent entries in the MoC
 
 ## Commands
 
-- **Insert template and fill previous/next** — inserts the configured template into the active note, then fills prev/next links
-- **Fill previous/next from MoC** — only fills prev/next links (no template insertion)
+Open the command palette (`Ctrl/Cmd + P`) and search for:
+
+- **MoC Prev/Next: Insert template and fill previous/next** — inserts the configured template into the active note, then fills prev/next links
+- **MoC Prev/Next: Fill previous/next from MoC** — only fills prev/next links (no template insertion)
 
 ## Settings
 
 - **Template** — dropdown listing files from your Obsidian core Templates folder
+- **MoC field** — frontmatter field that links to the Map of Content note (default: `course`)
+- **Previous field** — frontmatter field for the previous lesson link (default: `previous`)
+- **Next field** — frontmatter field for the next lesson link (default: `next`)
+- **ToC header** — heading text in the MoC that marks the start of the table of contents (default: `Table of Contents`)
 
 ## Assumptions
 
-- The lesson note has a `kurs` frontmatter field with a `[[wikilink]]` pointing to the MoC note
-- The MoC contains a line matching `* # Spis treści` (with any leading whitespace/indentation) — only `[[wikilinks]]` below that line are parsed
+- The lesson note has a frontmatter field (configurable, default `course`) with a `[[wikilink]]` pointing to the MoC note
+- The MoC contains a line matching `* # <ToC header>` (with any leading whitespace/indentation) — only `[[wikilinks]]` below that line are parsed
 - Duplicate links in the MoC are deduplicated (first occurrence wins)
 - The note's filename (basename) must exactly match a link target in the MoC
-- Previous/next are stored in frontmatter fields `poprzednia` and `następna`
+- Previous/next are stored in configurable frontmatter fields (default `previous` / `next`)
 - First and last entries get an empty string for their missing neighbour
 - The template dropdown reads the folder path from Obsidian's built-in Templates core plugin settings
 

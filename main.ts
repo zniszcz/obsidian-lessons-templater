@@ -2,14 +2,22 @@ import { App, Plugin, Notice, TFile, PluginSettingTab, Setting } from "obsidian"
 
 interface MocPrevNextSettings {
 	templatePath: string;
+	mocField: string;
+	prevField: string;
+	nextField: string;
+	tocHeader: string;
 }
 
 const DEFAULT_SETTINGS: MocPrevNextSettings = {
 	templatePath: "",
+	mocField: "course",
+	prevField: "previous",
+	nextField: "next",
+	tocHeader: "Table of Contents",
 };
 
 export default class MocPrevNextPlugin extends Plugin {
-	settings: MocPrevNextSettings;
+	settings!: MocPrevNextSettings;
 
 	async onload() {
 		await this.loadSettings();
@@ -72,14 +80,15 @@ export default class MocPrevNextPlugin extends Plugin {
 
 		const frontmatter =
 			this.app.metadataCache.getFileCache(activeFile)?.frontmatter;
-		if (!frontmatter?.kurs) {
-			new Notice('No "kurs" field in frontmatter.');
+		const mocFieldName = this.settings.mocField;
+		if (!frontmatter?.[mocFieldName]) {
+			new Notice(`No "${mocFieldName}" field in frontmatter.`);
 			return;
 		}
 
-		const mocName = this.extractLinkName(frontmatter.kurs);
+		const mocName = this.extractLinkName(frontmatter[mocFieldName]);
 		if (!mocName) {
-			new Notice("Could not parse kurs link.");
+			new Notice(`Could not parse ${mocFieldName} link.`);
 			return;
 		}
 
@@ -129,10 +138,12 @@ export default class MocPrevNextPlugin extends Plugin {
 
 		let inToc = false;
 		const links: string[] = [];
+		const escapedHeader = this.settings.tocHeader.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+		const tocPattern = new RegExp(`^\\s*\\*\\s*#\\s*${escapedHeader}`, "i");
 
 		for (const line of lines) {
 			if (!inToc) {
-				if (/^\s*\*\s*#\s*Spis treści/i.test(line)) {
+				if (tocPattern.test(line)) {
 					inToc = true;
 				}
 				continue;
@@ -151,8 +162,8 @@ export default class MocPrevNextPlugin extends Plugin {
 
 	async updateFrontmatter(file: TFile, prev: string, next: string) {
 		await this.app.fileManager.processFrontMatter(file, (fm) => {
-			fm["poprzednia"] = prev;
-			fm["następna"] = next;
+			fm[this.settings.prevField] = prev;
+			fm[this.settings.nextField] = next;
 		});
 	}
 }
@@ -191,5 +202,57 @@ class MocPrevNextSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 			});
+
+		new Setting(containerEl)
+			.setName("MoC field")
+			.setDesc("Frontmatter field that links to the Map of Content note")
+			.addText((text) =>
+				text
+					.setPlaceholder("course")
+					.setValue(this.plugin.settings.mocField)
+					.onChange(async (value) => {
+						this.plugin.settings.mocField = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Previous field")
+			.setDesc("Frontmatter field for the previous lesson link")
+			.addText((text) =>
+				text
+					.setPlaceholder("previous")
+					.setValue(this.plugin.settings.prevField)
+					.onChange(async (value) => {
+						this.plugin.settings.prevField = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Next field")
+			.setDesc("Frontmatter field for the next lesson link")
+			.addText((text) =>
+				text
+					.setPlaceholder("next")
+					.setValue(this.plugin.settings.nextField)
+					.onChange(async (value) => {
+						this.plugin.settings.nextField = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("ToC header")
+			.setDesc("Heading text in the MoC note that marks the start of the table of contents")
+			.addText((text) =>
+				text
+					.setPlaceholder("Table of Contents")
+					.setValue(this.plugin.settings.tocHeader)
+					.onChange(async (value) => {
+						this.plugin.settings.tocHeader = value;
+						await this.plugin.saveSettings();
+					}),
+			);
 	}
 }
