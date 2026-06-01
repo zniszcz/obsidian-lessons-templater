@@ -40,6 +40,12 @@ npm install
 npm run build
 ```
 
+`npm run build` automatically copies `.env.example` to `.env` on first run. The build script (`build.mjs`) reads `.env` and injects its values as compile-time constants via esbuild.
+
+### Debug logging
+
+Set `DEBUG_LOG_TO_FILE=true` in `.env` and rebuild. The plugin will write logs to `moc-prev-next-debug.log` in the vault root. By default (`false`), logs only go to the DevTools console (`Ctrl+Shift+I`).
+
 ## Install
 
 Via [BRAT](https://github.com/TfTHacker/obsidian42-brat): Add beta plugin → `zniszcz/obsidian-lessons-templater`
