@@ -1,0 +1,13 @@
+{
+	"name": "moc-prev-next",
+	"version": "0.1.0",
+	"private": true,
+	"scripts": {
+		"build": "esbuild main.ts --bundle --external:obsidian --outfile=main.js --format=cjs --platform=node"
+	},
+	"devDependencies": {
+		"@types/node": "^20.0.0",
+		"esbuild": "^0.21.0",
+		"obsidian": "latest"
+	}
+}

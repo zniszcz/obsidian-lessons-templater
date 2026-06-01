@@ -1,0 +1,9 @@
+{
+	"id": "moc-prev-next",
+	"name": "MoC Prev/Next",
+	"version": "0.1.0",
+	"minAppVersion": "1.0.0",
+	"description": "Automatically fills previous/next links in lesson notes based on their Map of Content.",
+	"author": "Adrian Zniszczyński",
+	"isDesktopOnly": false
+}
