@@ -34,4 +34,15 @@ npm install
 npm run build
 ```
 
-Copy `main.js` and `manifest.json` to `<vault>/.obsidian/plugins/moc-prev-next/`.
+## Install
+
+Via [BRAT](https://github.com/TfTHacker/obsidian42-brat): Add beta plugin → `zniszcz/obsidian-lessons-templater`
+
+## Releasing updates
+
+1. Bump `version` in `manifest.json`
+2. Build: `npm run build`
+3. Commit and push
+4. Create a release: `gh release create <version> main.js manifest.json --title "<version>"`
+
+BRAT picks up the new release automatically.
